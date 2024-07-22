@@ -14,10 +14,10 @@ st.selectbox('Select an algorithm', ['Content Based Filtering', 'Collaborative B
 
 st.title('Enter Your Three Favorite Movies')
  
-st.text_input("Enter first movie choice")
+st.selectbox("Enter first movie choice", ['Comedy', 'Romance'])
 
-st.text_input("Enter second movie choice")
+st.selectbox("Enter second movie choice", ['Comedy', 'Romance'])
 
-st.text_input("Enter third movie choice")
+st.selectbox("Enter third movie choice", ['Comedy', 'Romance'])
 
 st.button('Recommend')
