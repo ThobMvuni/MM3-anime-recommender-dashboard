@@ -1,395 +1,213 @@
 import streamlit as st
-import os
 import pandas as pd
+import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.cluster import KMeans
-from sklearn.datasets import make_blobs
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
+from surprise import Dataset, Reader, SVD, CoClustering, BaselineOnly, accuracy
+from surprise.model_selection import train_test_split
+import mlflow
 
-# Define path to the directory containing all pickled files
-MODEL_DIR = os.path.abspath(os.path.dirname(__file__))
+def load_models_and_data():
+    final_model_path = 'final_model.pkl'
+    tfidf_vectorizer_path = 'tfidf_vectorizer.pkl'
+    anime_df_path = 'anime_df.csv'
+    train_df_path = 'train_df.csv'
 
-# Paths to pickled models 
-cf_model = os.path.join(MODEL_DIR, 'cf_model.pkl')
-cb_model = os.path.join(MODEL_DIR, 'cb_model.pkl')
-tf_model = os.path.join(MODEL_DIR, 'tf_model.h5')
+    with open(final_model_path, 'rb') as file:
+        final_model = joblib.load(file)
+    with open(tfidf_vectorizer_path, 'rb') as file:
+        tfidf_vectorizer = joblib.load(file)
+    anime_df = pd.read_csv(anime_df_path)
+    train_df = pd.read_csv(train_df_path)
+    return final_model, tfidf_vectorizer, anime_df, train_df
 
-#Function of user ratings
-def plot_user_rating_distribution(train_merged):
-    plt.figure(figsize=(10, 6))
-    sns.histplot(train_merged['user_rating'], bins=10, kde=True)
-    plt.title('Distribution of User Ratings')
-    plt.xlabel('User Rating')
-    plt.ylabel('Frequency')
-    st.pyplot(plt)
+def plot_correlation_matrix(df):
+    numeric_df = df.select_dtypes(include=['float64', 'int64'])
+    corr_matrix = numeric_df.corr()
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
+    ax.set_title("Correlation Matrix")
+    st.pyplot(fig)
 
-#Function of top anime ratings
-def top_anime_ratings_count(df, n):
-    """
-    Counts the number of user ratings for the top n anime titles.
-    Parameters
-    ----------
-        df (DataFrame): input DataFrame
-        n (int): number of anime titles to show
-    Returns
-    -------
-        None: displays a barplot of top n anime titles by the number of ratings
-    """
-    # Create the barplot
-    plt.figure(figsize=(10, 6))
-    data = df['name'].value_counts().head(n)
+def plot_rating_distribution(train_df):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.histplot(train_df['rating'], bins=10, kde=True, ax=ax)
+    ax.set_title("Distribution of Ratings in train_df")
+    ax.set_xlabel("Rating")
+    ax.set_ylabel("Frequency")
+    st.pyplot(fig)
+
+def plot_ratings_boxplot(train_df):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.boxplot(x=train_df['rating'], ax=ax)
+    ax.set_title("Box Plot of Ratings in train_df")
+    ax.set_xlabel("Rating")
+    plt.tight_layout()
+    st.pyplot(fig)
+
+def plot_anime_types_count(anime_df):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.countplot(y=anime_df['type'], order=anime_df['type'].value_counts().index, ax=ax)
+    ax.set_title("Count Plot of Anime Types")
+    ax.set_xlabel("Count")
+    ax.set_ylabel("Type")
+    st.pyplot(fig)
+
+def plot_top_genres_count(anime_df):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    top_genres = anime_df['genre'].value_counts().nlargest(10).index
+    sns.countplot(y=anime_df[anime_df['genre'].isin(top_genres)]['genre'], order=top_genres, ax=ax)
+    ax.set_title("Count Plot of Top 10 Anime Genres")
+    ax.set_xlabel("Count")
+    ax.set_ylabel("Genre")
+    st.pyplot(fig)
+
+def train_evaluate_models(trainset, testset, algorithm):
+    models = {
+        'SVD': SVD(),
+        'CoClustering': CoClustering(),
+        'BaselineOnly': BaselineOnly()
+    }
+
+    model = models[algorithm]
+    with mlflow.start_run(nested=True):
+        model.fit(trainset)
+        predictions = model.test(testset)
+        rmse = accuracy.rmse(predictions)
+        mae = accuracy.mae(predictions)
+        st.write(f'{algorithm} - RMSE: {rmse}, MAE: {mae}')
+        mlflow.log_param("model", algorithm)
+        mlflow.log_metric("rmse", rmse)
+        mlflow.log_metric("mae", mae)
+    return model
+
+def get_recommendations(model, user_id, anime_df, anime_names):
+    anime_ids = []
+    for anime_name in anime_names:
+        anime_id = anime_df[anime_df['name'] == anime_name]['anime_id'].values
+        if len(anime_id) > 0:
+            anime_ids.append(anime_id[0])
     
-    ax = sns.barplot(x=data.index, y=data, order=data.index, palette='viridis', edgecolor="white")
+    predictions = [model.predict(user_id, anime_id) for anime_id in anime_ids]
+    return predictions
+
+def predict_ratings(algorithm, user_id, anime_names, anime_df, train_df):
+    # Load and split the data
+    reader = Reader(rating_scale=(1, 10))
+    data = Dataset.load_from_df(train_df[['user_id', 'anime_id', 'rating']], reader)
+    trainset, testset = train_test_split(data, test_size=0.25)
+
+    # Train the selected model
+    model = train_evaluate_models(trainset, testset, algorithm)
+
+    # Get recommendations for the given anime names
+    predictions = get_recommendations(model, user_id, anime_df, anime_names)
     
-    for p in ax.patches:
-        ax.text(p.get_x() + p.get_width() / 2., p.get_height(), f'{int(p.get_height())}', fontsize=11, ha='center', va='bottom')
-
-    plt.title(f'Top {n} Anime Titles by Number of Ratings', fontsize=14)
-    plt.xlabel('Anime Title')
-    plt.ylabel('Number of Ratings')
-    plt.xticks(rotation=45, ha='right')
-
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-    # Print summary information
-    st.write("Combined number of ratings for top anime titles:", data.sum())
-    st.write("Total number of unique anime titles:", df['name'].nunique())
-
-#Anime Recommendation System
-def plot_avg_user_rating_per_anime(df):
-    """
-    Plots the average user rating for the top 10 anime titles.
-    Parameters
-    ----------
-        df (DataFrame): input DataFrame
-    Returns
-    -------
-        None: displays a bar plot of top 10 anime by average user rating
-    """
-    # Compute average user rating per anime
-    avg_user_rating_per_anime = df.groupby('name')['user_rating'].mean().sort_values(ascending=False).head(10)
+    # Format and return predictions
+    results = []
+    for prediction in predictions:
+        anime_title = anime_df[anime_df['anime_id'] == prediction.iid]['name'].values[0]
+        results.append(f"Anime: {anime_title}, Estimated Rating: {prediction.est}")
     
-    # Create the bar plot
-    plt.figure(figsize=(12, 6))
-    avg_user_rating_per_anime.plot(kind='bar', color='skyblue', edgecolor='black')
-    plt.title('Top 10 Anime by Average User Rating')
-    plt.xlabel('Anime')
-    plt.ylabel('Average User Rating')
-    plt.xticks(rotation=45, ha='right')
-
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-#Show Genre Distribution
-def plot_genre_distribution(df):
-    """
-    Plots the distribution of anime genres, showing the top 10 genres.
-    Parameters
-    ----------
-        df (DataFrame): input DataFrame with a 'genre' column.
-    Returns
-    -------
-        None: displays a bar plot of top 10 anime genres
-    """
-    # Compute the genre distribution
-    genre_count = df['genre'].str.split(', ').explode().value_counts().head(10)
-    
-    # Create the bar plot
-    plt.figure(figsize=(12, 6))
-    genre_count.plot(kind='bar', color='lightcoral', edgecolor='black')
-    plt.title('Top 10 Anime Genres')
-    plt.xlabel('Genre')
-    plt.ylabel('Frequency')
-    plt.xticks(rotation=45, ha='right')
-
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-def plot_rating_distribution_by_genre(df):
-    """
-    Plots the distribution of user ratings by genre, showing the top 10 genres.
-    Parameters
-    ----------
-        df (DataFrame): input DataFrame with 'genre' and 'user_rating' columns.
-    Returns
-    -------
-        None: displays a box plot of user ratings by genre
-    """
-    # Get the top 10 genres
-    top_genres = df['genre'].str.split(', ').explode().value_counts().head(10).index
-    
-    # Filter the DataFrame for these top genres
-    genre_ratings = df[df['genre'].str.contains('|'.join(top_genres))]
-    genre_ratings = genre_ratings.explode('genre')
-    
-    # Create the box plot
-    plt.figure(figsize=(12, 8))
-    sns.boxplot(data=genre_ratings, x='genre', y='user_rating', palette='Set2')
-    plt.title('Distribution of Ratings by Genre')
-    plt.xlabel('Genre')
-    plt.ylabel('User Rating')
-    plt.xticks(rotation=90)
-    
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-def plot_distribution_of_ratings_by_genre(df):
-    """
-    Plots the distribution of user ratings by genre for the top 10 genres.
-    
-    Parameters
-    ----------
-    df (DataFrame): The DataFrame containing 'genre' and 'user_rating' columns.
-    
-    Returns
-    -------
-    None: Displays a box plot of user ratings by genre in the Streamlit app.
-    """
-    # Get the top 10 genres
-    top_genres = df['genre'].str.split(', ').explode().value_counts().head(10).index
-    
-    # Filter the DataFrame for these top genres
-    genre_ratings = df[df['genre'].str.contains('|'.join(top_genres))]
-    genre_ratings = genre_ratings.explode('genre')
-    
-    # Create the box plot
-    plt.figure(figsize=(12, 8))
-    sns.boxplot(data=genre_ratings, x='genre', y='user_rating', palette='Set2')
-    plt.title('Distribution of Ratings by Genre')
-    plt.xlabel('Genre')
-    plt.ylabel('User Rating')
-    plt.xticks(rotation=90)
-    
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-#Show Word Cloud of Anime Titles
-def plot_word_cloud(df):
-    """
-    Generates and displays a word cloud of anime titles.
-
-    Parameters
-    ----------
-    df (DataFrame): The DataFrame containing the 'name' column with anime titles.
-
-    Returns
-    -------
-    None: Displays a word cloud in the Streamlit app.
-    """
-    # Combine all anime titles into a single string
-    titles_text = ' '.join(df['name'])
-
-    # Generate the word cloud
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(titles_text)
-
-    # Create and display the word cloud plot
-    plt.figure(figsize=(12, 6))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    plt.title('Word Cloud of Anime Titles')
-
-    # Display the plot in Streamlit
-    st.pyplot(plt)
-
-
-def plot_rating_relationship(df):
-    """
-    Generates and displays a scatter plot showing the relationship between anime rating and user rating.
-
-    Parameters
-    ----------
-    df (DataFrame): The DataFrame containing 'anime_rating' and 'user_rating' columns.
-
-    Returns
-    -------
-    None: Displays a scatter plot in the Streamlit app.
-    """
-    plt.figure(figsize=(10, 6))
-    sns.scatterplot(data=df, x='anime_rating', y='user_rating', alpha=0.5)
-    plt.title('Relationship between Anime Rating and User Rating')
-    plt.xlabel('Anime Rating')
-    plt.ylabel('User Rating')
-    
-    # Display the plot in Streamlit
-    st.pyplot(plt)  
-
-
- # Streamlit Interface
-st.subheader('Anime Recommendation System')
-
-# Image
-st.image("anime.jpeg")
+    return results
 
 def main():
-    """Anime Recommendation App"""
-    
-    # Creating sidebar with selection box -
-    # you can create multiple pages this way
-options = ["Prediction", "Information", "Exploratory Data Analysis"]
-    
-    # Ensure each widget has a unique key to avoid DuplicateWidgetID error
-selection = st.sidebar.selectbox("Choose Option", options)
-    
-   
-    
-# Example feature mapping for demonstration
-def map_user_input(user_input_features):
-    # Implement this function based on how you encode or transform your inputs
-    # For simplicity, assuming direct conversion to a numpy array
-    return np.array([user_input_features])
+    st.image("anime.jpeg")
 
-#Building out the "Informnation" page
-if selection == "Information":
-    st.info("General Information")
-    st.markdown("""
-                Discover Your Next Favorite Anime with Our Smart Recommender System!
-Dive into a world where your anime watching experience is transformed with personalized recommendations! Our cutting-edge recommender system is designed to predict how much you'll love a new anime title based on your unique viewing history and preferences.
+    final_model, tfidf_vectorizer, anime_df, train_df = load_models_and_data()
 
-What Makes Our System Special?
+    st.title('Anime Recommendation System')
 
-Dual Filtering Techniques: We harness the power of both collaborative filtering and content-based filtering to offer you the most accurate predictions. Whether you're a fan of action-packed adventures or heartfelt dramas, our system gets you.
-Tailored for You: By analyzing your historical preferences and the nuances of anime content, we craft recommendations that are as unique as your taste.
-End-to-End Development: From data preprocessing and model training to real-time recommendations, we've covered every stage of machine learning development to bring you a seamless experience.
-Interactive Streamlit App: Explore, interact, and discover with our user-friendly Streamlit application, designed to make finding your next favorite anime fun and easy.
-Objective of Our Recommender System:
-Our goal is simple – to enhance your anime watching journey by predicting how you'll rate new titles based on your viewing history. We analyze your preferences and the intricate details of anime content to offer recommendations that truly resonate with you.
+    options = ["Information", "Exploratory Data Analysis", "Predict Ratings", "About Us"]
+    selection = st.sidebar.selectbox("Choose Option", options)
 
-Experience the future of anime recommendations today. Your next favorite anime is just a recommendation away!  
-                """)
+    if selection == "Information":
+        st.info("General Information")
+        st.markdown("""Discover Your Next Favorite Anime with Our Smart Recommender System!
+        Dive into a world where your anime watching experience is transformed with personalized recommendations! Our cutting-edge recommender system is designed to predict how much you'll love a new anime title based on your unique viewing history and preferences.
 
+        Why Choose Our System?
+        What Makes Our System Special?
 
-# Building out the "Exploratory Data Analysis" page
-if selection == "Exploratory Data Analysis":
-    st.subheader("Exploratory Data Analysis")
-
-    st.subheader('Anime Recommendation System')
-
-    # Assuming train_merged is already loaded and preprocessed
-    # Replace the following line with your actual data loading code
-    train_merged = pd.read_csv('train_merged.csv')
-
-    if st.button('Plot User Rating Distribution'):
-        plot_user_rating_distribution(train_merged)
-
-    st.subheader('Anime Recommendation System') 
-
-    # Assuming df is already loaded and preprocessed
-    # Replace the following line with your actual data loading code
-    df = pd.read_csv('path_to_your_data.csv')
-
-    n = st.slider('Select the number of top anime titles to show', min_value=1, max_value=20, value=5)
-
-    if st.button('Show Top Anime Ratings'):
-        top_anime_ratings_count(df, n)
-
-    st.subheader('Anime Recommendation System')
-
-    # Load your DataFrame (replace with actual data loading)
-    df = pd.read_csv('path_to_train_merged.csv')
-
-    # Button to plot the average user rating
-    if st.button('Show Average User Rating for Top 10 Anime'):
-        plot_avg_user_rating_per_anime(df)
-
-    st.subheader('Anime Recommendation System')
-
-    # Load your DataFrame (replace with actual data loading)
-    df = pd.read_csv('path_to_train_merged.csv')
-
-    # Button to plot genre distribution
-    if st.button('Show Genre Distribution'):
-        plot_genre_distribution(df)
-
-    st.subheader('Anime Recommendation System')
-
-    # Load your DataFrame (replace with actual data loading)
-    df = pd.read_csv('path_to_train_merged.csv')
-
-    # Button to plot rating distribution by genre
-    if st.button('Show Rating Distribution by Genre'):
-        plot_rating_distribution_by_genre(df)
-
-    st.subheader('Anime Recommendation System')
-    
-    # Load your DataFrame (replace with actual data loading)
-    df = pd.read_csv('path_to_train_merged.csv')  # Update with the actual path to your dataset
-
-    # Button to plot the word cloud
-    if st.button('Show Word Cloud of Anime Titles'):
-        plot_word_cloud(df)
-
-
-    st.subheader('Anime Recommendation System')
-    
-    # Load your DataFrame (replace with actual data loading)
-    df = pd.read_csv('path_to_train_merged.csv')  # Update with the actual path to your dataset
-
-    # Button to plot the word cloud
-    if st.button('Show Word Cloud of Anime Titles'):
-        plot_word_cloud(df)
-
-
-if selection == "Prediction":
-    # Selection for algorithm selection
-    algorithm = st.selectbox('Select an algorithm', ['Content Based Filtering', 'Collaborative Filtering', 'Hybrid'])
-
-    # Inputs for user’s favorite movies
-    st.header('Enter Your Three Favorite Movies')
-
-    movie1 = st.selectbox("Enter first movie choice", ['Comedy', 'Romance', 'Action', 'Drama'])
-    movie2 = st.selectbox("Enter second movie choice", ['Comedy', 'Romance', 'Action', 'Drama'])
-    movie3 = st.selectbox("Enter third movie choice", ['Comedy', 'Romance', 'Action', 'Drama'])
-    
-    if st.button('Recommend'):
-    # Check if all inputs are provided
-        if not movie1 or not movie2 or not movie3:
-            st.error('Please enter all three movie choices.')
-        else:
-            # Convert the user input to the appropriate format
-            user_input_features = [movie1, movie2, movie3]
-            user_features = map_user_input(user_input_features)  # Convert to model input format
-        if algorithm == 'Content Based Filtering':
-            # Predict using Content-Based Filtering
-            content_based_prediction = cb_model.predict(user_features)  # Ensure this method matches model expectations
-            st.write(f'Content-Based Prediction: {content_based_prediction}')
-
-        elif algorithm == 'Collaborative Filtering':
-            # Predict using Collaborative Filtering
-            collaborative_prediction = cf_model.predict(user_features)  # Ensure this method matches model expectations
-            st.write(f'Collaborative Filtering Prediction: {collaborative_prediction}')
-
-        elif algorithm == 'Hybrid':
-            # Predict using Hybrid Recommendation
-            alpha = st.slider('Select weight for Collaborative Filtering', 0.0, 1.0, 0.5)
-            hybrid_prediction = hybrid_recommendation(user_features, cf_model, cb_model, tf_model, alpha)
-            st.write(f'Hybrid Recommendation Prediction: {hybrid_prediction}')
+        Dual Filtering Techniques: 
+        We harness the power of both collaborative filtering and content-based filtering to offer you the most accurate predictions. Whether you're a fan of action-packed adventures or heartfelt dramas, our system gets you.
+        
+        Tailored for You:
+        By analyzing your historical preferences and the nuances of anime content, we craft recommendations that are as unique as your taste.
+        
+        End-to-End Development: 
+        From data preprocessing and model training to real-time recommendations, we've covered every stage of machine learning development to bring you a seamless experience.
+        
+        Interactive Streamlit App:
+        Explore, interact, and discover with our user-friendly Streamlit application, designed to make finding your next favorite anime fun and easy.
+        
+        Objective of Our Recommender System:
+        Our goal is simple – to enhance your anime watching journey by predicting how you'll rate new titles based on your viewing history. We analyze your preferences and the intricate details of anime content to offer recommendations that truly resonate with you.
+        Experience the future of anime recommendations today. Your next favorite anime is just a recommendation away! """)
+        
+    elif selection == "Exploratory Data Analysis":
+        st.subheader("Exploratory Data Analysis")
+        st.subheader('Correlation Matrix Heatmap')
+        if st.button('Plot Correlation Matrix Heatmap'):
+            plot_correlation_matrix(anime_df)
+        st.subheader('Distribution of Ratings')
+        if st.button('Plot Distribution of Ratings'):
+            plot_rating_distribution(train_df)
+        st.subheader(' Box Plot of Ratings')
+        if st.button('Count of Different Anime Types'):
+            plot_ratings_boxplot(train_df)
+        st.subheader('Correlation Matrix Heatmap')
+        if st.button('Plot Count of Different Anime Types'):
+            plot_anime_types_count(anime_df)
+        st.subheader('Count of Top 10 Anime Genres')
+        if st.button('Plot Count of Top 10 Anime Genres'):
+            plot_top_genres_count(anime_df)
             
-def hybrid_recommendation(user_features, cf_model, cb_model, tf_model, alpha=0.5):
-    # Ensure user_features is in correct format for each model
-    # Collaborative Filtering Prediction
-    cf_prediction = cf_model.predict(user_features)
 
-    # Content-Based Filtering Prediction
-    cb_prediction = cb_model.predict(user_features, user_features)  # Adjust as needed for your model
+    elif selection == "Predict Ratings":
+          st.subheader("Predict Ratings for Anime Titles")
+          algorithm = st.radio("Choose algorithm", ["SVD", "CoClustering", "BaselineOnly"])
+          user_id = st.number_input("Enter your user ID", min_value=1, step=1)
+          anime_name_1 = st.text_input("Enter Anime Name 1", "")
+          anime_name_2 = st.text_input("Enter Anime Name 2", "")
+          anime_name_3 = st.text_input("Enter Anime Name 3", "")
 
-    # TensorFlow Model Prediction
-    user_input = np.array([user_features[0]])  # Example, adapt as needed
-    anime_input = np.array([user_features[1]])  # Example, adapt as needed
-    tf_prediction = tf_model.predict([user_input, anime_input])
+          if st.button("Predict Ratings"):
+              anime_names = [anime_name_1, anime_name_2, anime_name_3]
+              anime_names = [name for name in anime_names if name]  # Remove empty names
+              if anime_names:
+                  results = predict_ratings(algorithm, user_id, anime_names, anime_df, train_df)
+                  for result in results:
+                      st.write(result)
+              else:
+                  st.write("Please enter at least one anime name.")
+                
+    elif selection == "About Us":
+        st.info("About Us")
+        st.markdown("""For any inquiries or further information, please contact any one from our team: 
+                
+                            - Mogafe Mogale - nalediandriena@gmail.com
+                            - Nolwazi Mndebele - mndebelenf@gmail.com
+                            - Nontuthuko Mpanza - nontuthukompanza@outlook.com
+                            - Seneme Mpungose - senemempungose16@gmail.com
+                            - Michael Thema - michaelthema@gmail.com
+                            - Thobile Mvuni - thoyomvuni@gmail.com
 
-    # Combine predictions
-    hybrid_prediction = alpha * cf_prediction + (1 - alpha) * cb_prediction + (1 - alpha) * tf_prediction
-    return hybrid_prediction
+                              **Vision:**
+         To revolutionize information access by seamlessly categorizing news articles, empowering users with accurate and insightful content classification.
+         
+         **Our Data Scientists:**
+         Our team of dedicated data scientists is committed to pushing the boundaries of technology and innovation. With expertise in machine learning, data analysis, and software development, they work tirelessly to enhance the performance and accuracy of our recommender system. Each member brings a unique set of skills and experiences to the project, ensuring that we deliver top-notch recommendations tailored to your preferences.
+         
+         **Meet the Team:**
+         - **Mogafe Mogale:** Expert in machine learning algorithms and data modeling. Passionate about leveraging data to drive insights.
+         - **Nolwazi Mndebele:** Skilled in data preprocessing and exploratory analysis. Focused on creating intuitive data visualizations.
+         - **Nontuthuko Mpanza:** Specializes in recommendation systems and algorithm optimization. Dedicated to enhancing recommendation accuracy.
+         - **Seneme Mpungose:** Experienced in software development and integration. Ensures seamless functionality of our Streamlit app.
+         - **Michael Thema:** Adept at statistical analysis and model evaluation. Focused on rigorous testing and validation of models.
+         - **Thobile Mvuni:** Expert in data collection and cleaning. Ensures high-quality data for robust recommendations.
 
-# Required to let Streamlit instantiate our web app.  
-if __name__ == '__main__':
-	main()
+         Together, we strive to make your anime watching experience more enjoyable by offering precise and personalized recommendations based on your unique preferences.""")
 
-
-
-
+if __name__ == "__main__":
+    main()
