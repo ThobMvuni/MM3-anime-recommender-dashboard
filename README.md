@@ -32,6 +32,11 @@ Well, you are about to find out! In this project, we build a collaborative and c
 Dataset Overview
 The dataset consists of thousands of users and thousands of anime titles, gathered from myanimelist.net.
 
+## 2. Dataset <a class="anchor" id="dataset"></a>
+The dataset is comprised of news articles that need to be classified into categories based on their content, including `Business`, `Technology`, `Sports`, `Education`, and `Entertainment`. You can find both the `train.csv` and `test.csv` datasets [here](https://github.com/ereshia/2401FTDS_Classification_Project/tree/main/Data/processed).
+
+**Dataset Features:**
+
 Files used:
 anime.csv: This file contains information about the anime content, including aspects such as the id, name, genre, type, number of episodes (if applicable), an average rating based on views, and the number of members in the anime 'group'.
 training.csv: This file contains user ratings of the anime titles.
@@ -40,20 +45,6 @@ Purpose
 The purpose of this project is to develop a robust and reliable recommendation system for anime using collaborative and content-based filtering methods.
 
 Let me know if you'd like me to make any changes!
-
-
-## 2. Dataset <a class="anchor" id="dataset"></a>
-The dataset is comprised of news articles that need to be classified into categories based on their content, including `Business`, `Technology`, `Sports`, `Education`, and `Entertainment`. You can find both the `train.csv` and `test.csv` datasets [here](https://github.com/ereshia/2401FTDS_Classification_Project/tree/main/Data/processed).
-
-**Dataset Features:**
-| **Column**                                                                                  | **Description**              
-|---------------------------------------------------------------------------------------------|--------------------   
-| Headlines   | 	The headline or title of the news article.
-| Description | A brief summary or description of the news article.
-| Content | The full text content of the news article.
-| URL | The URL link to the original source of the news article.
-| Category | The category or topic of the news article (e.g., business, education, entertainment, sports, technology).
-
 ## 3. Packages <a class="anchor" id="packages"></a>
 
 To carry out all the objectives for this repo, the following necessary dependencies were loaded:
@@ -111,6 +102,16 @@ For this repository, we are only concerned with a single file:
 | :--------------------- | :--------------------             |
 | `base_app.py`          | Streamlit application definition. |
 The Streamlit Repo additionally has the pickled models used in the app, the pickled vectoriser and the test.csv 
+## Usage Instructions
+
+### Decompressing the Dataset
+
+The `large_dataset.zip` file contains the dataset needed for the project. To decompress it, use the following command:
+
+```sh
+unzip train_df.zip
+unzip final_model.pkl
+
 
 #### 6.1 Running the Streamlit web app on your local machine
 
