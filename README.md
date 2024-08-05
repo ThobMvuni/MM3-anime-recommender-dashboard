@@ -2,7 +2,10 @@
 
 ![](https://img.shields.io/badge/Python-3776AB.svg?style=for-the-badge&logo=Python&logoColor=white) [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
 
-<center>![Anime Image](anime.jpeg)</center>
+<div id="s_image" align="center">  
+  <img src="anime.jpeg" width="550" height="300" alt=""/>  
+</div>
+
 
 ## Table of contents
 * [1. Project Overview](#project-description)
@@ -136,7 +139,10 @@ As a first step to becoming familiar with our web app's functioning, we recommen
 ```
 You should also be automatically directed to the base page of your web app. This should look something like:
 
-<center>![Anime Image](app_image.png)</center>
+<div id="s_image" align="center">  
+  <img src="app_image.png" width="550" height="300" alt=""/>  
+</div>
+
 
 Congratulations! You've now officially deployed your first web application!
 
