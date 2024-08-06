@@ -158,25 +158,26 @@ def main():
         recommendations that truly resonate with you.
         Experience the future of anime recommendations today. 
         Your next favorite anime is just a recommendation away! """)
-        
+            
     elif selection == "Exploratory Data Analysis":
         st.subheader("Exploratory Data Analysis")
-        st.subheader('Correlation Matrix Heatmap')
-        if st.button('Plot Correlation Matrix Heatmap'):
+        analysis_types = st.multiselect("Select analysis types", 
+                                        ["Correlation Matrix Heatmap", 
+                                        "Distribution of Ratings", 
+                                        "Box Plot of Ratings", 
+                                        "Count of Different Anime Types", 
+                                        "Count of Top 10 Anime Genres"])
+
+        if "Correlation Matrix Heatmap" in analysis_types:
             plot_correlation_matrix(anime_df)
-        st.subheader('Distribution of Ratings')
-        if st.button('Plot Distribution of Ratings'):
+        if "Distribution of Ratings" in analysis_types:
             plot_rating_distribution(train_df)
-        st.subheader(' Box Plot of Ratings')
-        if st.button('Count of Different Anime Types'):
+        if "Box Plot of Ratings" in analysis_types:
             plot_ratings_boxplot(train_df)
-        st.subheader('Correlation Matrix Heatmap')
-        if st.button('Plot Count of Different Anime Types'):
+        if "Count of Different Anime Types" in analysis_types:
             plot_anime_types_count(anime_df)
-        st.subheader('Count of Top 10 Anime Genres')
-        if st.button('Plot Count of Top 10 Anime Genres'):
+        if "Count of Top 10 Anime Genres" in analysis_types:
             plot_top_genres_count(anime_df)
-            
 
     elif selection == "Predict Ratings":
           st.subheader("Predict Ratings for Anime Titles")
