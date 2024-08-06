@@ -118,7 +118,7 @@ def main():
 
     st.title('Anime Recommendation System')
 
-    options = ["Information", "Exploratory Data Analysis", "Predict Ratings", "About Us"]
+    options = ["Information", "Predict Ratings", "Exploratory Data Analysis", "About Us"]
     selection = st.sidebar.selectbox("Choose Option", options)
 
     if selection == "Information":
@@ -130,20 +130,34 @@ def main():
         What Makes Our System Special?
 
         Dual Filtering Techniques: 
-        We harness the power of both collaborative filtering and content-based filtering to offer you the most accurate predictions. Whether you're a fan of action-packed adventures or heartfelt dramas, our system gets you.
+        We harness the power of both collaborative filtering 
+        and content-based filtering to offer you the most 
+        accurate predictions. Whether you're a fan of action-packed
+        adventures or heartfelt dramas, our system gets you.
         
         Tailored for You:
-        By analyzing your historical preferences and the nuances of anime content, we craft recommendations that are as unique as your taste.
+        By analyzing your historical preferences and the nuances 
+        of anime content, we craft recommendations that are as 
+        unique as your taste.
         
         End-to-End Development: 
-        From data preprocessing and model training to real-time recommendations, we've covered every stage of machine learning development to bring you a seamless experience.
+        From data preprocessing and model training to real-time 
+        recommendations, we've covered every stage of machine 
+        learning development to bring you a seamless experience.
         
         Interactive Streamlit App:
-        Explore, interact, and discover with our user-friendly Streamlit application, designed to make finding your next favorite anime fun and easy.
+        Explore, interact, and discover with our user-friendly 
+        Streamlit application, designed to make finding your 
+        next favorite anime fun and easy.
         
         Objective of Our Recommender System:
-        Our goal is simple – to enhance your anime watching journey by predicting how you'll rate new titles based on your viewing history. We analyze your preferences and the intricate details of anime content to offer recommendations that truly resonate with you.
-        Experience the future of anime recommendations today. Your next favorite anime is just a recommendation away! """)
+        Our goal is simple – to enhance your anime watching 
+        journey by predicting how you'll rate new titles based 
+        on your viewing history. We analyze your preferences and 
+        the intricate details of anime content to offer 
+        recommendations that truly resonate with you.
+        Experience the future of anime recommendations today. 
+        Your next favorite anime is just a recommendation away! """)
         
     elif selection == "Exploratory Data Analysis":
         st.subheader("Exploratory Data Analysis")
