@@ -8,10 +8,10 @@ from surprise.model_selection import train_test_split
 import mlflow
 
 def load_models_and_data():
-    final_model_path = 'final_model.pkl'
+    final_model_path = 'final_model.zip'
     tfidf_vectorizer_path = 'tfidf_vectorizer.pkl'
     anime_df_path = 'anime_df.csv'
-    train_df_path = 'train_df.csv'
+    train_df_path = 'train_df.zip'
 
        #Load final_model.pkl from a zip archive
     with zipfile.ZipFile('final_model.zip', 'r') as z:
