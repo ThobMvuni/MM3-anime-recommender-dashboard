@@ -155,13 +155,6 @@ Congratulations! You've now officially deployed your first web application!
 
 ## 7. Team Members<a class="anchor" id="team-members"></a>
 
-- Mogafe Mogale - nalediandriena@gmail.com
-                        - Nolwazi Mndebele - mndebelenf@gmail.com
-                        - Nontuthuko Mpanza - nontuthukompanza@outlook.com
-                        - Seneme Mpungose - senemempungose16@gmail.com
-                        - Michael Thema - michaelthema@gmail.com
-                         - c - thoyomvuni@gmail.com
-
 | Name                                           |  Email              
 |---------------------------------------------------------------------------------------------|--------------------             
 | [Mogafe Mogale]                               | nalediandriena@gmail.com
