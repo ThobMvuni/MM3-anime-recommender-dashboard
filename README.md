@@ -90,7 +90,7 @@ In its own words:
 
 > It’s a simple and powerful app model that lets you build rich UIs incredibly quickly.
 
-[Streamlit](https://www.streamlit.io/)  takes away much of the background work needed in order to get a platform which can deploy your models to clients and end users. Meaning that you get to focus on the important stuff (related to the data), and can largely ignore the rest. This will allow you to become a lot more productive.  
+[Streamlit]([https://www.streamlit.io/](https://mm3-anime-recommender-dashboard.streamlit.app/))  takes away much of the background work needed in order to get a platform which can deploy your models to clients and end users. Meaning that you get to focus on the important stuff (related to the data), and can largely ignore the rest. This will allow you to become a lot more productive.  
 
 ##### Description of files
 
