@@ -94,7 +94,7 @@ In its own words:
 
 ##### Description of files
 
-Public Streamlit Repo with application: https://github.com/PrishaniK/OA1_Classification_Project_Streamlit_Repo
+Public Streamlit Repo with application: (https://github.com/MichaelThema/MM3-anime-recommender-dashboard)
 Link to Streamlit application: 
 For this repository, we are only concerned with a single file:
 
