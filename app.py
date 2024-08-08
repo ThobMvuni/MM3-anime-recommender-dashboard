@@ -15,8 +15,8 @@ def load_models_and_data():
     train_df_path = 'train_df.zip'
 
        #Load final_model.pkl from a zip archive
-    with zipfile.ZipFile('final_model.zip', 'r') as z:
-        with z.open(final_model_path) as file:
+    with zipfile.ZipFile(final_model_path, 'r') as z:
+        with z.open('final_model.pkl') as file:
             final_model = joblib.load(file)
     
     #Load tfidf_vectorizer.pkl directly
@@ -24,8 +24,8 @@ def load_models_and_data():
         tfidf_vectorizer = joblib.load(file)
     
     #Load train_df.csv from a zip archive
-    with zipfile.ZipFile('train_df.zip', 'r') as z:
-        with z.open(train_df_path) as file:
+    with zipfile.ZipFile(train_df_path, 'r') as z:
+        with z.open('train_df.csv') as file:
             train_df = pd.read_csv(file)
     
     # Load anime_df.csv directly
